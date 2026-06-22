@@ -409,6 +409,294 @@
 
 
 
+// import 'dotenv/config';
+// import express from 'express';
+// import mongoose from 'mongoose';
+// import cors from 'cors';
+// import jwt from 'jsonwebtoken';
+// import Category from './model/Category.js';
+// import User from './model/User.js';
+
+// const app = express();
+// const JWT_SECRET = process.env.JWT_SECRET;
+// const PORT = process.env.PORT || 5000;
+
+// // --- MIDDLEWARES ---
+// app.use(express.json());
+
+// // CORS configuration (Apne frontend localhost aur live URL dono ke liye)
+// app.use(cors({
+//     origin: ['http://localhost:3000', 'http://localhost:5173', 'https://blog-backend-7nnn.vercel.app'],
+//     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
+//     credentials: true
+// }));
+
+// // --- VERCEL OPTIMIZED DATABASE CONNECTION ---
+// let cached = global.mongoose;
+// if (!cached) cached = global.mongoose = { conn: null, promise: null };
+
+// async function connectToDatabase() {
+//     if (cached.conn) return cached.conn;
+//     if (!cached.promise) {
+//         cached.promise = mongoose.connect(process.env.MONGODB_URI, {
+//             bufferCommands: false,
+//         }).then((mongoose) => mongoose);
+//     }
+//     cached.conn = await cached.promise;
+//     return cached.conn;
+// }
+
+// // --- SECURITY MIDDLEWARE (Token Verification) ---
+// const verifyToken = (req, res, next) => {
+//     const authHeader = req.headers['authorization'];
+//     if (!authHeader) return res.status(403).json({ message: "No token provided!" });
+    
+//     const token = authHeader.split(' ')[1];
+//     if (!token) return res.status(403).json({ message: "Malformed token!" });
+
+//     jwt.verify(token, JWT_SECRET, (err, decoded) => {
+//         if (err) return res.status(401).json({ message: "Unauthorized!" });
+//         req.user = decoded;
+//         next();
+//     });
+// };
+
+// // --- MODELS ---
+// const BlogSchema = new mongoose.Schema({
+//     title: String, 
+//     category: String, 
+//     content: String, 
+//     author: { type: String, default: "admin" }, 
+//     createdAt: { type: Date, default: Date.now }
+// });
+// const Blog = mongoose.models.Blog || mongoose.model('Blog', BlogSchema);
+
+
+// // --- 1. AUTH & USER ROUTES ---
+
+// // Login API
+// app.post('/api/login', async (req, res) => {
+//     try {
+//         await connectToDatabase();
+//         const { email, password } = req.body;
+        
+//         if (!email || !password) {
+//             return res.status(400).json({ message: "Email and password are required" });
+//         }
+
+//         const user = await User.findOne({ email: email.trim() });
+//         if (!user || user.password !== password) {
+//             return res.status(401).json({ message: "Invalid credentials" });
+//         }
+
+//         const token = jwt.sign({ userId: user._id, role: user.role }, JWT_SECRET, { expiresIn: '1h' });
+//         res.json({ token, role: user.role });
+//     } catch (error) {
+//         res.status(500).json({ message: "Server error during login", error: error.message });
+//     }
+// });
+
+// // --- GET BLOGS BY CATEGORY (Express Backend: server.js) ---
+// app.get('/api/blogs/category/:category', async (req, res) => {
+//     try {
+//         await connectToDatabase();
+//         const { category } = req.params;
+
+//         // Database se us category ke blogs nikalna (Case-insensitive check ke sath)
+//         const blogs = await Blog.find({ 
+//             category: { $regex: new RegExp(`^${category}$`, 'i') } 
+//         }).sort({ createdAt: -1 });
+
+//         res.json(blogs);
+//     } catch (error) {
+//         res.status(500).json({ message: "Error fetching category blogs", error: error.message });
+//     }
+// });
+// // Create New User (Admin Only)
+// app.post('/api/users', verifyToken, async (req, res) => {
+//     if (req.user.role !== 'admin') {
+//         return res.status(403).json({ message: "Access Denied: Admins only!" });
+//     }
+
+//     try {
+//         await connectToDatabase();
+//         const { email, password } = req.body;
+        
+//         if (!email || !password) {
+//             return res.status(400).json({ message: "Email and password are required" });
+//         }
+
+//         const newUser = new User({ email, password, role: 'editor' }); // Default role 'editor'
+//         await newUser.save();
+//         res.status(201).json({ message: "User created successfully!" });
+//     } catch (error) {
+//         res.status(400).json({ message: "Error creating user", error: error.message });
+//     }
+// });
+
+// // Get Total Users Count (Admin Only)
+// app.get('/api/users/count', verifyToken, async (req, res) => {
+//     if (req.user.role !== 'admin') {
+//         return res.status(403).json({ message: "Access Denied: Admins only!" });
+//     }
+
+//     try {
+//         await connectToDatabase();
+//         const count = await User.countDocuments();
+//         res.json({ count });
+//     } catch (error) {
+//         res.status(500).json({ message: "Error fetching users count", error: error.message });
+//     }
+// });
+
+
+// // --- 2. BLOG ROUTES ---
+
+// // Get All Blogs
+// app.get('/api/blogs', async (req, res) => {
+//     try {
+//         await connectToDatabase();
+//         const blogs = await Blog.find().sort({ createdAt: -1 });
+//         res.json(blogs);
+//     } catch (error) {
+//         res.status(500).json({ message: "Error fetching blogs", error: error.message });
+//     }
+// });
+
+// // Create A Blog (Protected - Login Required)
+// app.post('/api/blogs', verifyToken, async (req, res) => {
+//     try {
+//         await connectToDatabase();
+//         const newBlog = new Blog(req.body);
+//         await newBlog.save();
+//         res.status(201).json(newBlog);
+//     } catch (error) {
+//         res.status(500).json({ message: "Error creating blog", error: error.message });
+//     }
+// });
+
+// // Update A Blog (Admin Only)
+// app.patch('/api/blogs/:id', verifyToken, async (req, res) => {
+//     if (req.user.role !== 'admin') {
+//         return res.status(403).json({ message: 'Only admin can edit blogs' });
+//     }
+//     try {
+//         await connectToDatabase();
+//         const updated = await Blog.findByIdAndUpdate(req.params.id, req.body, { new: true });
+//         if (!updated) return res.status(404).json({ message: 'Blog not found' });
+//         res.json(updated);
+//     } catch (error) {
+//         res.status(500).json({ message: "Error updating blog", error: error.message });
+//     }
+// });
+
+// // Delete A Blog (Admin Only)
+// app.delete('/api/blogs/:id', verifyToken, async (req, res) => {
+//     if (req.user.role !== 'admin') {
+//         return res.status(403).json({ message: 'Only admin can delete blogs' });
+//     }
+//     try {
+//         await connectToDatabase();
+//         const deleted = await Blog.findByIdAndDelete(req.params.id);
+//         if (!deleted) return res.status(404).json({ message: 'Blog not found' });
+//         res.json({ message: 'Blog deleted successfully' });
+//     } catch (error) {
+//         res.status(500).json({ message: "Error deleting blog", error: error.message });
+//     }
+// });
+
+
+// // --- 3. CATEGORY ROUTES ---
+
+// // Get All Categories
+// app.get('/api/categories', async (req, res) => {
+//     try {
+//         await connectToDatabase();
+//         const categories = await Category.find();
+//         res.json(categories);
+//     } catch (error) {
+//         res.status(500).json({ message: "Error fetching categories", error: error.message });
+//     }
+// });
+
+
+// // Add Category (Admin Only)
+// app.post('/api/categories', verifyToken, async (req, res) => {
+//     if (req.user.role !== 'admin') {
+//         return res.status(403).json({ message: "Only admin can add categories" });
+//     }
+//     try {
+//         await connectToDatabase();
+//         const newCategory = new Category(req.body);
+//         await newCategory.save();
+//         res.status(201).json(newCategory);
+//     } catch (err) {
+//         res.status(400).json({ message: "Category already exists or invalid data!", error: err.message });
+//     }
+// });
+
+// // Update Category (Admin Only)
+// app.patch('/api/categories/:id', verifyToken, async (req, res) => {
+//     if (req.user.role !== 'admin') {
+//         return res.status(403).json({ message: "Only admin can edit categories" });
+//     }
+//     try {
+//         await connectToDatabase();
+//         const updatedCategory = await Category.findByIdAndUpdate(req.params.id, req.body, { new: true });
+//         if (!updatedCategory) return res.status(404).json({ message: "Category not found" });
+//         res.json(updatedCategory);
+//     } catch (error) {
+//         res.status(500).json({ message: "Error updating category", error: error.message });
+//     }
+// });
+
+// // Delete Category (Admin Only)
+// app.delete('/api/categories/:id', verifyToken, async (req, res) => {
+//     if (req.user.role !== 'admin') {
+//         return res.status(403).json({ message: "Only admin can delete categories" });
+//     }
+//     try {
+//         await connectToDatabase();
+//         const deleted = await Category.findByIdAndDelete(req.params.id);
+//         if (!deleted) return res.status(404).json({ message: "Category not found" });
+//         res.json({ message: "Category deleted successfully" });
+//     } catch (error) {
+//         res.status(500).json({ message: "Error deleting category", error: error.message });
+//     }
+// });
+
+
+// // --- 4. STATS ROUTE ---
+// app.get('/api/stats', async (req, res) => {
+//     try {
+//         await connectToDatabase();
+//         const stats = await Blog.aggregate([{ $group: { _id: "$category", count: { $sum: 1 } } }]);
+//         res.json(stats);
+//     } catch (error) {
+//         res.status(500).json({ error: error.message });
+//     }
+// });
+
+// // --- SERVER START ---
+// app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+// export default app;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+import dns from 'node:dns';
 import 'dotenv/config';
 import express from 'express';
 import mongoose from 'mongoose';
@@ -420,13 +708,13 @@ import User from './model/User.js';
 const app = express();
 const JWT_SECRET = process.env.JWT_SECRET;
 const PORT = process.env.PORT || 5000;
-
+dns.setServers(['1.1.1.1', '8.8.8.8']);
 // --- MIDDLEWARES ---
 app.use(express.json());
 
 // CORS configuration (Apne frontend localhost aur live URL dono ke liye)
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://localhost:5173', 'https://blog-frontend-beige-three.vercel.app'],
+    origin: ['http://localhost:3000', 'http://localhost:5173', 'https://blog-backend-7nnn.vercel.app'],
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true
 }));
@@ -461,7 +749,7 @@ const verifyToken = (req, res, next) => {
     });
 };
 
-// --- MODELS ---
+// --- DATABASE MODELS (Hamesha top par hone chahiye) ---
 const BlogSchema = new mongoose.Schema({
     title: String, 
     category: String, 
@@ -510,7 +798,7 @@ app.post('/api/users', verifyToken, async (req, res) => {
             return res.status(400).json({ message: "Email and password are required" });
         }
 
-        const newUser = new User({ email, password, role: 'editor' }); // Default role 'editor'
+        const newUser = new User({ email, password, role: 'editor' }); 
         await newUser.save();
         res.status(201).json({ message: "User created successfully!" });
     } catch (error) {
@@ -544,6 +832,22 @@ app.get('/api/blogs', async (req, res) => {
         res.json(blogs);
     } catch (error) {
         res.status(500).json({ message: "Error fetching blogs", error: error.message });
+    }
+});
+
+// GET BLOGS BY CATEGORY (Ab sahi jagah par clean register hoga)
+app.get('/api/blogs/category/:category', async (req, res) => {
+    try {
+        await connectToDatabase();
+        const { category } = req.params;
+
+        const blogs = await Blog.find({ 
+            category: { $regex: new RegExp(`^${category}$`, 'i') } 
+        }).sort({ createdAt: -1 });
+
+        res.json(blogs);
+    } catch (error) {
+        res.status(500).json({ message: "Error fetching category blogs", error: error.message });
     }
 });
 
