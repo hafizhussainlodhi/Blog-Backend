@@ -16,7 +16,7 @@ const JWT_SECRET = process.env.JWT_SECRET; // Real project mein ise .env mein ra
 app.use(cors());
 app.use(express.json());
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://localhost:5173'], // Dono ports allow karein
+    origin: ['http://localhost:3000', 'http://localhost:5173',  'https://blog-backend-five-nu.vercel.app'], // Dono ports allow karein
     methods: ['GET', 'POST', 'PATCH', 'DELETE'],
     credentials: true
 }));
