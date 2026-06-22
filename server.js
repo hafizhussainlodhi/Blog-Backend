@@ -426,7 +426,7 @@ app.use(express.json());
 
 // CORS configuration (Apne frontend localhost aur live URL dono ke liye)
 app.use(cors({
-    origin: ['http://localhost:3000', 'http://localhost:5173', 'https://blog-backend-7nnn.vercel.app'],
+    origin: ['http://localhost:3000', 'http://localhost:5173', 'https://blog-frontend-beige-three.vercel.app'],
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true
 }));
